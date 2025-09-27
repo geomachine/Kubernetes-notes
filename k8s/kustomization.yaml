@@ -1,0 +1,5 @@
+resources:
+  - hello-app/deployment.yaml
+  - hello-app/service.yaml
+  - headlamp/deployment.yaml
+  - headlamp/service.yaml

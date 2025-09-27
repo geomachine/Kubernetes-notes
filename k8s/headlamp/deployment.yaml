@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headlamp
+  labels:
+    app: headlamp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headlamp
+  template:
+    metadata:
+      labels:
+        app: headlamp
+    spec:
+      containers:
+      - name: headlamp
+        image: ghcr.io/headlamp-k8s/headlamp:latest
+        ports:
+        - containerPort: 4466
