@@ -1,0 +1,31 @@
+# Terraform state files
+*.tfstate
+*.backup
+
+# Crash log files
+crash.log
+
+# Ignore override files that are local-only
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# .terraform directories
+.terraform/
+.terraform.lock.hcl
+
+# Environment files (may contain secrets)
+.env
+.envrc
+
+# IDE/editor files
+*.swp
+*.swo
+*.DS_Store
+.vscode/
+.idea/
+
+# Optional: local backup files
+*.bak
+*.old
