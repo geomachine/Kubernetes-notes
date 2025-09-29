@@ -413,3 +413,51 @@ Deploy a sample application to verify the cluster is working:
 ---
 
 This guide sets up a functional Kubernetes cluster with all core components. For production, consider adding high availability (e.g., multiple control planes), persistent storage, and monitoring. Let me know if you need help with specific configurations or troubleshooting!
+
+-------------
+Final debug and fix:
+Nice 🎉 your **control plane is Ready** now, Calico is running, CoreDNS is running, and your cluster is healthy.
+But your **app pods (nginx, hello-app, headlamp)** are stuck in `Pending`.
+
+👉 This is because your cluster currently has **only the control plane node**, and by default Kubernetes **taints control-plane/master nodes** so they don’t schedule regular workloads.
+
+---
+
+### 🔧 Fix: Allow workloads on control-plane node
+
+Since you don’t have worker nodes yet, you need to untaint the control plane so it can also run pods:
+
+```bash
+kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+```
+
+If you’re on Kubernetes v1.24+, sometimes it uses `node-role.kubernetes.io/master` instead:
+
+```bash
+kubectl taint nodes --all node-role.kubernetes.io/master-
+```
+
+That removes the "NoSchedule" taint from the control-plane node.
+
+---
+
+### ✅ After that
+
+Run:
+
+```bash
+kubectl get pods -A -o wide
+```
+
+You should see your `nginx`, `hello-app`, `headlamp` moving from `Pending` → `ContainerCreating` → `Running`.
+
+---
+
+### ⚡ Next Steps
+
+* If you plan to add **worker nodes**, leave the taint in place and just join workers with the `kubeadm join ...` command.
+* If this is just for **learning / dev setup**, untainting control-plane is perfectly fine.
+
+---
+
+Do you want me to also show you how to expose your **NodePort services** (like `nginx` and `headlamp`) in the browser from your Ubuntu host?
