@@ -48,13 +48,13 @@ hostname -I
 
 ```bash
 sudo k3s-uninstall.sh
-K3S_TOKEN=<contol-plane-node-token>
-K3S_URL=https://<control-plane-ip>:6443
-K3S_NODE_IP=<node-ip>
-curl -sfL https://get.k3s.io/ | \
+WORKER_IP=<worker-ip>
+K3S_TOKEN="<contol-plane-node-token>"
+K3S_URL="https://<control-plane-ip>:6443"
+curl -sfL https://get.k3s.io | \
 K3S_URL=$K3S_URL \
 K3S_TOKEN=$K3S_TOKEN \
-K3S_NODE_IP=$K3S_NODE_IP \
+K3S_NODE_IP=$WORKER_IP \
 sh -
 ```
 
