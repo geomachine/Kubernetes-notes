@@ -48,9 +48,9 @@ hostname -I
 
 ```bash
 sudo k3s-uninstall.sh
-WORKER_IP=<worker-ip>
-K3S_TOKEN="<contol-plane-node-token>"
-K3S_URL="https://<control-plane-ip>:6443"
+WORKER_IP=$(tailscale ip -4)
+K3S_TOKEN="<control-plane-node-token>"
+K3S_URL="https://<control-plane>:6443"
 curl -sfL https://get.k3s.io | \
 K3S_URL=$K3S_URL \
 K3S_TOKEN=$K3S_TOKEN \
@@ -67,18 +67,13 @@ kubectl get nodes
 ## Step 9: Deploy and Test the whoami Service
 
 ```bash
-kubectl create deployment whoami --image=containous/whoami
-kubectl expose deployment whoami --port=80 --type=ClusterIP
+sudo kubectl apply -f whoami-v2.yaml
 ```
 
-## Step 10: Test Connectivity with Port Forwarding
-
-```
-sudo kubectl port-forward svc/whoami 8080:80
-```
+## Step 10: Test Connectivity in browser using machine ip and NodePort defined in the whoami-v2.yaml deployment file.
 
 ## Step 11: Curl the service
 
 ```bash
-curl http://localhost:8080
+curl http://<NodeIP>:<NodePort>
 ```
