@@ -46,11 +46,10 @@ State is split across two places:
 
 ACL policy storage is `policy.mode: database` (also in Postgres) rather than a file — this is what lets the ACL/Policy tab in the Zenith dashboard read and write policy through the Headscale API instead of needing a file mounted and kept in sync.
 
-**Secrets:** the Postgres password is **not** in `config.yaml` (a tracked file). It's injected via the `HEADSCALE_DATABASE_POSTGRES_PASS` environment variable in `docker-compose.yaml`, sourced from a **gitignored `.env`** (Viper maps `HEADSCALE_` env vars to config keys automatically — dots become underscores). A `.env` in this directory needs at minimum:
+**Secrets:** the Postgres password is **not** in `config.yaml` (a tracked file). It's injected via the `HEADSCALE_DATABASE_POSTGRES_PASS` environment variable in `docker-compose.yaml`, sourced from a **gitignored `.env`** (Viper maps `HEADSCALE_` env vars to config keys automatically — dots become underscores). Copy `.env.example` to `.env` and fill in real values:
 
 ```bash
-WORK_DIR=/absolute/path/to/network      # used for every bind mount path in docker-compose.yaml
-HEADSCALE_DB_PASSWORD=<aiven-postgres-password>
+cp .env.example .env
 ```
 
 **Networks:**
