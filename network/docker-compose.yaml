@@ -1,0 +1,54 @@
+version: "3.8"
+
+networks:
+  headscale-net:
+    driver: bridge
+  caddy-net:
+    external: true
+
+services:
+  headscale:
+    # INCIDENT NOTE (2026-07): this was ":latest" — a host restart re-pulled a
+    # newer Headscale version with a stricter config schema than what was
+    # actually deployed, and it crash-looped. Pinned to the version confirmed
+    # working now; bump deliberately (and re-validate the config) rather than
+    # letting a routine restart silently pick up a new one.
+    image: docker.io/headscale/headscale:v0.28.0
+    container_name: headscale
+    restart: unless-stopped
+    volumes:
+      - "${WORK_DIR}/headscale/config.yaml:/etc/headscale/config.yaml:ro"
+      - "${WORK_DIR}/headscale/derp-filter.yaml:/etc/headscale/derp-filter.yaml:ro"
+      - "${WORK_DIR}/headscale/lib:/var/lib/headscale"
+      - "${WORK_DIR}/headscale/run:/var/run/headscale"
+      # Aiven's CA cert — NOT a secret (a CA cert is meant to be public; it's
+      # what lets us verify Aiven's server identity), safe to commit, unlike
+      # the password below.
+      - "${WORK_DIR}/headscale/aiven-ca.crt:/etc/headscale/aiven-ca.crt:ro"
+    environment:
+      # The Postgres password — deliberately NOT in config.yaml (tracked file).
+      # Set the real value in .env (gitignored). Viper maps this to
+      # database.postgres.pass automatically (HEADSCALE_ prefix, dots -> underscores).
+      - HEADSCALE_DATABASE_POSTGRES_PASS=${HEADSCALE_DB_PASSWORD}
+      # Standard libpq/pgx env var — since Headscale's own config has no field
+      # for a custom CA path, this is how `ssl: verify-full` in config.yaml
+      # actually finds Aiven's CA to verify against.
+      - PGSSLROOTCERT=/etc/headscale/aiven-ca.crt
+    command: serve
+    ports:
+      - "8081:8081"
+      - "50444:50444"
+      - "3478:3478/udp"  # STUN for the embedded DERP relay — see config.yaml's derp.server note
+    networks:
+      - headscale-net
+      - caddy-net
+
+  headscale-admin:
+    image: goodieshq/headscale-admin:latest
+    container_name: headscale-admin
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    networks:
+      - headscale-net
+      - caddy-net

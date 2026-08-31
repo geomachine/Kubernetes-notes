@@ -1,0 +1,132 @@
+# Headscale server configuration
+# server_url MUST be the public HTTPS URL clients reach us on. VMs join the
+# tailnet with `tailscale up --login-server=<MANAGER_HEADSCALE_PUBLIC_URL>`, so
+# this has to match that domain (your_network_domain_or_subdomain.com) or registration fails.
+server_url: https://your_network_domain_or_subdomain.com
+# server_url: http://headscale:8081  # internal-only; breaks client registration
+
+# Network listen addresses
+listen_addr: 0.0.0.0:8081
+grpc_listen_addr: 0.0.0.0:50444
+metrics_listen_addr: 127.0.0.1:9091
+
+# Noise protocol private key
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key  # stays inside container's /var/lib/headscale
+
+# IP prefixes for the VPN
+prefixes:
+  v4: 100.65.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+# DERP server configuration
+#
+# The actual fix for the recurring "some SSH connections hang, no
+# correlation with which node" incident (2026-07-31) is derp-filter.yaml
+# (paths, below): root-caused to nodes whose home-DERP-region election
+# landed on Bengaluru, confirmed live (a stuck node's own tailscaled
+# journal showed repeated, 100%-failing "could not connect to the
+# 'Bengaluru' relay server") to not be reliably reachable from this
+# tailnet's network — while Singapore, a near-coin-flip away on latency,
+# was solid every time it was checked. Disabling region 6 (Bengaluru) in
+# the merged map stops any client from ever electing it, closing the
+# actual selection race rather than adding capacity elsewhere. See
+# derp-filter.yaml's own comment for the full story.
+#
+# server.enabled is deliberately false. An embedded relay was tried the
+# same day (region 999, "ZenDevz Skynet DERP") and reverted a few hours
+# later: DERP's connection-upgrade handshake is fundamentally an HTTP/1.1
+# mechanism, and Caddy — fronting this same server_url for every app on
+# the platform, not just Headscale — offers both HTTP/1.1 and HTTP/2 by
+# default. Confirmed directly with curl: the exact same /derp endpoint
+# returns a broken 426 when a connection negotiates HTTP/2, and a clean,
+# complete handshake (101 Switching Protocols, real DERP protocol bytes)
+# when forced to HTTP/1.1 — which one a given real connection lands on is
+# effectively non-deterministic, matching the intermittent symptom exactly.
+# Forcing Caddy to HTTP/1.1 platform-wide would have fixed it too, but that
+# affects every app behind this shared gateway, not just Headscale — turning
+# the embedded relay back off is the fully-scoped fix with zero blast radius
+# beyond Headscale. Public Singapore (minus the Bengaluru filter) has
+# been reliable every time it's been checked, so nothing is lost by relying
+# on it alone. If the embedded relay is ever revisited, it needs Caddy split
+# onto its own dedicated HTTP/1.1-only listener first — see git history
+# around 2026-07-31 for the full investigation (kwstate's
+# TAILNET_INCIDENT_REPORT_2026-07-31.md in the wider org repo has the
+# complete case report).
+derp:
+  server:
+    enabled: false
+    region_id: 999
+    region_code: "headscale"
+    region_name: "ZenDevz Skynet DERP"
+    stun_listen_addr: "0.0.0.0:3478"
+    private_key_path: /var/lib/headscale/derp_server_private.key
+    automatically_add_embedded_derp_region: true
+  paths:
+    - /etc/headscale/derp-filter.yaml
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+  auto_update_enabled: true
+  update_frequency: 24h
+
+# Database configuration (Postgres — Aiven, dedicated instance for Headscale only)
+# INCIDENT NOTE (2026-07): local bind-mounted SQLite lost all node/user data
+# after a host restart exposed a broken volume mount (WORK_DIR was never set),
+# and even once the mount was fixed, the target directory had never actually
+# held a persisted db.sqlite. Moved to a managed, durable Postgres instance so
+# Headscale's own reliability no longer depends on this VM's local disk/mounts.
+#
+# `pass` is deliberately NOT set here — it's supplied via the
+# HEADSCALE_DATABASE_POSTGRES_PASS environment variable (see docker-compose.yaml
+# and .env, gitignored) so the password never sits in a tracked file.
+#
+# ssl: verify-full + PGSSLROOTCERT (set in docker-compose.yaml, pointing at the
+# mounted aiven-ca.pem) gives full certificate + hostname verification, not just
+# an encrypted-but-unverified connection — Headscale's own `ssl` field passes
+# through verbatim as `sslmode=<value>` whenever it doesn't parse as a plain
+# bool (see hscontrol/db/db.go's openDB), so this is a real, supported mode,
+# not a hack.
+database:
+  type: postgres
+  postgres:
+    host: # give it your host
+    port: # port
+    name: # database name
+    user: # database user 
+    ssl: verify-full
+    max_open_conns: 15  
+    max_idle_conns: 5
+    conn_max_idle_time_secs: 3600
+
+# ACL policy storage. Left unset before, which defaults to file-mode with an
+# empty path -> every /api/v1/policy call (used by network administrator's Policy
+# tab) 500s with `reading policy from path "": open : no such file or
+# directory`. Using "database" stores the policy in the existing Postgres
+# instance above instead, so it's editable purely through the network administrator
+# dashboard / Headscale API — no file to mount or sync.
+policy:
+  mode: database
+
+# TLS configuration
+tls_letsencrypt_hostname: ""
+tls_cert_path: ""
+tls_key_path: ""
+
+# Logging
+log:
+  format: json
+  level: info
+
+# DNS
+dns:
+  magic_dns: true
+  base_domain: krakens.primary
+  nameservers:
+    global:
+      - 1.1.1.1
+      - 1.0.0.1
+
+# Unix socket for Headscale CLI
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"

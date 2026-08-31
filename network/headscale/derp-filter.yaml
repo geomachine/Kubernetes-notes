@@ -1,0 +1,38 @@
+# Local DERP map override, merged with the auto-updating public map fetched
+# via `derp.urls` in config.yaml (see that file's derp section for the full
+# story). This file ONLY disables specific regions — it doesn't replace or
+# duplicate the public map, so the other 27 regions still auto-update
+# normally every `derp.update_frequency`.
+#
+# Region 6 (Bengaluru, derp6.tailscale.com) disabled 2026-07-31: root-caused
+# a recurring "control-plane fine, DERP session dead" failure pattern to
+# nodes whose home-region race landed on Bengaluru — confirmed live in a
+# stuck node's own tailscaled journal (repeated "could not connect to the
+# 'Bengaluru' relay server" with zero successful connections), while every
+# node that landed on Singapore instead was solid. Singapore and Bengaluru
+# measure within a few ms of each other from this tailnet's network
+# location (a near-coin-flip on any given netcheck), so which one a node
+# picks as home is essentially random — but only one of the two is actually
+# reachable in practice. Disabling the unreachable one removes the coin
+# flip entirely rather than patching each affected node after the fact.
+#
+# If this ever needs reverting (e.g. Bengaluru's node quality genuinely
+# improves later), just delete the `6: null` line below — Headscale will
+# go back to serving it from the public map on the next fetch.
+#
+# Region 999 ("ZenDevz Skynet DERP", the embedded relay) disabled 2026-07-31,
+# same day: `derp.server.enabled: false` in config.yaml stops Headscale from
+# actually running the embedded relay, but `automatically_add_embedded_derp_region:
+# true` still advertises region 999 in the served map regardless — nodes that
+# had already elected it as home (before it was turned off) kept trying and
+# permanently failing to reach it ("could not connect to the relay server
+# with ID '999'"), same failure class as Bengaluru, just guaranteed instead
+# of intermittent since nothing listens there at all now. Excluding it here
+# explicitly, the same way as Bengaluru, rather than trusting the auto-add
+# flag to behave correctly when the server itself is off. If the embedded
+# relay is ever properly re-enabled (see config.yaml's derp section for what
+# that actually requires — Caddy split onto its own HTTP/1.1-only listener
+# first), delete the `999: null` line below too.
+regions:
+  6: null # Bengaluru (derp6.tailscale.com)
+  999: null # ZenDevz Skynet DERP (embedded relay, currently disabled)

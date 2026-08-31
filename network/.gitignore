@@ -1,0 +1,20 @@
+# Secrets — never tracked. Same pattern used by HEADSCALE_DATABASE_POSTGRES_PASS
+# in docker-compose.yaml: real values live only in .env on the host.
+.env
+.env.*
+!.env.example
+
+# Headscale runtime state — noise_private.key (trust identity) and any local
+# db remnants live here. This is what scripts/backup-headscale-key.sh backs
+# up to S3 precisely because it is NOT in git and NOT in the Postgres DB.
+headscale/lib/*
+!headscale/lib/readme.md
+
+# Runtime sockets/pidfiles — regenerated on every start, never useful in git.
+headscale/run/*
+!headscale/run/readme.md
+
+# Unreferenced by docker-compose.yaml today; keep ignored in case it starts
+# being used for real state instead of the placeholder readme.
+headscale/data/*
+!headscale/data/readme.md

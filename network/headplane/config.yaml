@@ -1,0 +1,22 @@
+# Configuration for the Headplane server and web application
+server:
+  host: "0.0.0.0"
+  port: 3001  # Docker will map this
+
+  # Secret for web sessions (32 characters)
+  cookie_secret: "you_give_it_a_secret"
+
+  # Cookies do not require HTTPS for local testing
+  cookie_secure: true
+
+# Headscale specific settings
+headscale:
+  # URL to the local Headscale API inside the Docker network
+  url: "http://headscale:8081"
+
+
+  # Path inside the container for Headscale config
+  config_path: "/etc/headscale/config.yaml"
+
+  # Enable strict validation
+  config_strict: true
