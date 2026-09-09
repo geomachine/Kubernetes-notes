@@ -1,4 +1,4 @@
-# Kubernetes Codebas e — High-Level Overview
+# Kubernetes Codebase — High-Level Overview
 
 This is the real `kubernetes/kubernetes` source repo. Plain-English map of what's where.
 
